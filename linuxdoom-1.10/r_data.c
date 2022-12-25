@@ -24,6 +24,7 @@
 //-----------------------------------------------------------------------------
 
 
+#include <malloc.h>
 static const char
 rcsid[] = "$Id: r_data.c,v 1.4 1997/02/03 16:47:55 b1 Exp $";
 
@@ -43,6 +44,8 @@ rcsid[] = "$Id: r_data.c,v 1.4 1997/02/03 16:47:55 b1 Exp $";
 
 #ifdef LINUX
 #include  <alloca.h>
+#include <endian.h>
+#include  <stdint.h>
 #endif
 
 
@@ -87,9 +90,9 @@ typedef struct
     boolean		masked;	
     short		width;
     short		height;
-    void		**columndirectory;	// OBSOLETE
+    uint32_t            columndirectory;	// OBSOLETE
     short		patchcount;
-    mappatch_t	patches[1];
+    mappatch_t	patches[];
 } maptexture_t;
 
 
@@ -503,6 +506,8 @@ void R_InitTextures (void)
 	
     for (i=0 ; i<numtextures ; i++, directory++)
     {
+        size_t patchcount;
+        size_t texlen;
 	if (!(i&63))
 	    printf (".");
 
@@ -518,8 +523,12 @@ void R_InitTextures (void)
 
 	if (offset > maxoff)
 	    I_Error ("R_InitTextures: bad texture directory");
+
+        patchcount = SHORT(*(short*)((byte*)maptex + offset + offsetof(maptexture_t, patchcount)));
+        texlen = sizeof(maptexture_t) + patchcount * sizeof(mappatch_t);
 	
-	mtexture = (maptexture_t *) ( (byte *)maptex + offset);
+        mtexture = malloc(texlen);
+        memcpy(mtexture, (byte*)maptex + offset, texlen);
 
 	texture = textures[i] =
 	    Z_Malloc (sizeof(texture_t)
@@ -556,6 +565,8 @@ void R_InitTextures (void)
 	textureheight[i] = texture->height<<FRACBITS;
 		
 	totalwidth += texture->width;
+
+        free(mtexture);
     }
 
     Z_Free (maptex1);
