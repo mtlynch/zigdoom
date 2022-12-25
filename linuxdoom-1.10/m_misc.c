@@ -231,6 +231,29 @@ typedef struct
     int		untranslated;		// lousy hack
 } default_t;
 
+typedef struct
+{
+    char* name;
+    char* init;
+} deferred_init_t;
+
+static const deferred_init_t deferred_inits[] =
+{
+    {"sndserver", "sndserver"},
+    {"mousedev", "/dev/tty50"},
+    {"mousetype", "microsoft"},
+    {"chatmacro0", HUSTR_CHATMACRO0},
+    {"chatmacro1", HUSTR_CHATMACRO1},
+    {"chatmacro2", HUSTR_CHATMACRO2},
+    {"chatmacro3", HUSTR_CHATMACRO3},
+    {"chatmacro4", HUSTR_CHATMACRO4},
+    {"chatmacro5", HUSTR_CHATMACRO5},
+    {"chatmacro6", HUSTR_CHATMACRO6},
+    {"chatmacro7", HUSTR_CHATMACRO7},
+    {"chatmacro8", HUSTR_CHATMACRO8},
+    {"chatmacro9", HUSTR_CHATMACRO9},
+};
+
 default_t	defaults[] =
 {
     {"mouse_sensitivity",&mouseSensitivity, 5},
@@ -254,15 +277,15 @@ default_t	defaults[] =
 
 // UNIX hack, to be removed. 
 #ifdef SNDSERV
-    {"sndserver", (int *) &sndserver_filename, (int) "sndserver"},
+    {"sndserver", (int *) &sndserver_filename, 0},
     {"mb_used", &mb_used, 2},
 #endif
     
 #endif
 
 #ifdef LINUX
-    {"mousedev", (int*)&mousedev, (int)"/dev/ttyS0"},
-    {"mousetype", (int*)&mousetype, (int)"microsoft"},
+    {"mousedev", (int*)&mousedev, 0},
+    {"mousetype", (int*)&mousetype, 0},
 #endif
 
     {"use_mouse",&usemouse, 1},
@@ -285,16 +308,16 @@ default_t	defaults[] =
 
     {"usegamma",&usegamma, 0},
 
-    {"chatmacro0", (int *) &chat_macros[0], (int) HUSTR_CHATMACRO0 },
-    {"chatmacro1", (int *) &chat_macros[1], (int) HUSTR_CHATMACRO1 },
-    {"chatmacro2", (int *) &chat_macros[2], (int) HUSTR_CHATMACRO2 },
-    {"chatmacro3", (int *) &chat_macros[3], (int) HUSTR_CHATMACRO3 },
-    {"chatmacro4", (int *) &chat_macros[4], (int) HUSTR_CHATMACRO4 },
-    {"chatmacro5", (int *) &chat_macros[5], (int) HUSTR_CHATMACRO5 },
-    {"chatmacro6", (int *) &chat_macros[6], (int) HUSTR_CHATMACRO6 },
-    {"chatmacro7", (int *) &chat_macros[7], (int) HUSTR_CHATMACRO7 },
-    {"chatmacro8", (int *) &chat_macros[8], (int) HUSTR_CHATMACRO8 },
-    {"chatmacro9", (int *) &chat_macros[9], (int) HUSTR_CHATMACRO9 }
+    {"chatmacro0", (int *) &chat_macros[0], 0 },
+    {"chatmacro1", (int *) &chat_macros[1], 0 },
+    {"chatmacro2", (int *) &chat_macros[2], 0 },
+    {"chatmacro3", (int *) &chat_macros[3], 0 },
+    {"chatmacro4", (int *) &chat_macros[4], 0 },
+    {"chatmacro5", (int *) &chat_macros[5], 0 },
+    {"chatmacro6", (int *) &chat_macros[6], 0 },
+    {"chatmacro7", (int *) &chat_macros[7], 0 },
+    {"chatmacro8", (int *) &chat_macros[8], 0 },
+    {"chatmacro9", (int *) &chat_macros[9], 0 }
 
 };
 
@@ -340,6 +363,7 @@ extern byte	scantokey[128];
 void M_LoadDefaults (void)
 {
     int		i;
+    int		j;
     int		len;
     FILE*	f;
     char	def[80];
@@ -347,11 +371,17 @@ void M_LoadDefaults (void)
     char*	newstring;
     int		parm;
     boolean	isstring;
+    int numinits;
     
     // set everything to base values
     numdefaults = sizeof(defaults)/sizeof(defaults[0]);
     for (i=0 ; i<numdefaults ; i++)
+    {
+	for (j=0 ; j<numinits; j++)
+	    if (!strcmp(deferred_inits[j].name, defaults[i].name))
+		defaults[i].defaultvalue = (int)deferred_inits[j].init;
 	*defaults[i].location = defaults[i].defaultvalue;
+    }
     
     // check for a custom default file
     i = M_CheckParm ("-config");
