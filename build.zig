@@ -81,6 +81,9 @@ pub fn build(b: *std.build.Builder) !void {
         "-DNORMALUNIX",
         "-DLINUX",
         "-ggdb3",
+        "-fsanitize=address",
+        "-fno-sanitize-trap=undefined",
+        "-fno-sanitize-recover=undefined",
     };
     const jsondir = "build/";
     std.fs.cwd().makeDir(jsondir) catch |e| switch (e) {
@@ -94,6 +97,10 @@ pub fn build(b: *std.build.Builder) !void {
             jsondir ++ file_stem ++ ".o.jsonfrag",
         });
     }
+    exe.addLibraryPath("/usr/lib/gcc/x86_64-linux-gnu/12");
+    exe.linkSystemLibrary("ubsan");
+    exe.linkSystemLibrary("unwind");
+    exe.linkSystemLibrary("asan");
     exe.linkSystemLibrary("X11");
     exe.linkSystemLibrary("Xext");
 }
