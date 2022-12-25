@@ -375,6 +375,7 @@ void M_LoadDefaults (void)
     
     // set everything to base values
     numdefaults = sizeof(defaults)/sizeof(defaults[0]);
+    numinits = sizeof(deferred_inits)/sizeof(deferred_inits[0]);
     for (i=0 ; i<numdefaults ; i++)
     {
 	for (j=0 ; j<numinits; j++)
