@@ -27,6 +27,7 @@ rcsid[] = "$Id: z_zone.c,v 1.4 1997/02/03 16:47:58 b1 Exp $";
 #include "z_zone.h"
 #include "i_system.h"
 #include "doomdef.h"
+#include "modern.h"
 
 
 //
@@ -250,7 +251,7 @@ Z_Malloc
     if (extra >  MINFRAGMENT)
     {
 	// there will be a free fragment after the allocated block
-	newblock = (memblock_t *) ((byte *)base + size );
+	newblock = (memblock_t *) ((byte *)base + ALIGN(size, 8) );
 	newblock->size = extra;
 	
 	// NULL indicates free block.

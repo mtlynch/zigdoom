@@ -80,6 +80,7 @@ pub fn build(b: *std.build.Builder) !void {
         "-std=gnu89",
         "-DNORMALUNIX",
         "-DLINUX",
+        "-ggdb3",
     };
     const jsondir = "build/";
     std.fs.cwd().makeDir(jsondir) catch |e| switch (e) {
