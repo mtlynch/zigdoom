@@ -73,14 +73,6 @@ int  I_GetHeapSize (void)
     return mb_used*1024*1024;
 }
 
-void* I_ZoneBase (int*	size)
-{
-    *size = mb_used*1024*1024;
-    return (byte *) malloc (*size);
-}
-
-
-
 //
 // I_GetTime
 // returns time in 1/70th second tics
