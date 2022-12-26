@@ -137,6 +137,8 @@ export fn Z_Malloc(
     tag: c_int,
     user: ?*anyopaque,
 ) ?*anyopaque {
+    dumpHeap(std.io.getStdErr().writer()) catch unreachable;
+
     var size = (size_in + 3) & ~@as(c_int, 3);
     size += @sizeOf(MemBlock);
     var base = mainzone.rover.?;
@@ -211,4 +213,61 @@ export fn Z_Malloc(
     mainzone.rover = base.next;
     base.id = zone_id;
     return @intToPtr(*anyopaque, @ptrToInt(base) + @sizeOf(MemBlock));
+}
+
+export fn Z_FreeTags(lowtag: c_int, hightag: c_int) void {
+    var next: *MemBlock = undefined;
+    var block = mainzone.blocklist.next.?;
+    while (block != &mainzone.blocklist) : (block = next) {
+        next = block.next.?;
+
+        if (block.user == null)
+            continue;
+
+        if (block.tag >= lowtag and block.tag <= hightag) {
+            Z_Free(@intToPtr(
+                ?*anyopaque,
+                @ptrToInt(block) + @sizeOf(MemBlock),
+            ));
+        }
+    }
+}
+
+export fn Z_FileDumpHeap(f: *std.c.FILE) void {
+    var writer = std.io.cWriter(f);
+
+    dumpHeap(writer) catch unreachable;
+}
+
+fn dumpHeap(writer: anytype) !void {
+    try writer.print(
+        "zone size: {d}  location: {x}\n",
+        .{ mainzone.size, @ptrToInt(mainzone) },
+    );
+
+    var block = mainzone.blocklist.next.?;
+    while (true) : (block = block.next.?) {
+        try writer.print(
+            "block:{*}    size:{d:7}    user:{?x}    tag:{d:3}\n",
+            .{ block, block.size, block.user, block.tag },
+        );
+
+        if (block.next == &mainzone.blocklist)
+            break;
+
+        if (@ptrToInt(block) + @intCast(usize, block.size) != @ptrToInt(block.next))
+            try writer.writeAll(
+                "ERROR: block size does not touch the next block\n",
+            );
+
+        if (block.next.?.prev != block)
+            try writer.writeAll(
+                "ERROR: next block doesn't have proper back link\n",
+            );
+
+        if (block.user == null and block.next.?.user == null)
+            try writer.writeAll(
+                "ERROR: two consecutive free blocks\n",
+            );
+    }
 }
