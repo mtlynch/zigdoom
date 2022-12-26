@@ -97,6 +97,10 @@ pub fn build(b: *std.build.Builder) !void {
             jsondir ++ file_stem ++ ".o.jsonfrag",
         });
     }
+    const zone = b.addObject("zone", srcdir ++ "z_zone.zig");
+    zone.linkLibC();
+    zone.addIncludePath(srcdir);
+    exe.addObject(zone);
     exe.addLibraryPath("/usr/lib/gcc/x86_64-linux-gnu/12");
     exe.linkSystemLibrary("ubsan");
     exe.linkSystemLibrary("unwind");

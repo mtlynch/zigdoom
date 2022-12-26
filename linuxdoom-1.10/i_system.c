@@ -73,7 +73,7 @@ int  I_GetHeapSize (void)
     return mb_used*1024*1024;
 }
 
-byte* I_ZoneBase (int*	size)
+void* I_ZoneBase (int*	size)
 {
     *size = mb_used*1024*1024;
     return (byte *) malloc (*size);
@@ -159,7 +159,7 @@ byte*	I_AllocLow(int length)
 //
 extern boolean demorecording;
 
-void I_Error (char *error, ...)
+void I_Error (const char *error, ...)
 {
     va_list	argptr;
 

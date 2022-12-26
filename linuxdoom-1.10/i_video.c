@@ -164,6 +164,7 @@ int xlatekey(void)
 void I_ShutdownGraphics(void)
 {
   // Detach from X server
+  if (!X_display) return;
   if (!XShmDetach(X_display, &X_shminfo))
 	    I_Error("XShmDetach() failed in I_ShutdownGraphics()");
 
