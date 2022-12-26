@@ -74,7 +74,6 @@ pub fn build(b: *std.build.Builder) !void {
         srcdir ++ "v_video.c",
         srcdir ++ "w_wad.c",
         srcdir ++ "wi_stuff.c",
-        srcdir ++ "z_zone.c",
     };
     const common_cflags = [_][]const u8{
         "-std=gnu89",
