@@ -36,7 +36,7 @@ export var mainzone: *MemZone = undefined;
 
 extern var mb_used: c_int;
 
-fn zone_base(size: *c_int) *anyopaque {
+fn zoneBase(size: *c_int) *anyopaque {
     size.* = mb_used * 1024 * 1024;
     const result = std.heap.c_allocator.allocWithOptions(
         u8,
@@ -51,7 +51,7 @@ export fn Z_Init() void {
     var size: c_int = undefined;
     mainzone = @ptrCast(
         *MemZone,
-        @alignCast(@alignOf(MemBlock), zone_base(&size)),
+        @alignCast(@alignOf(MemBlock), zoneBase(&size)),
     );
     mainzone.size = size;
 
