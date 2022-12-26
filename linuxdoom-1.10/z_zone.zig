@@ -1,8 +1,4 @@
 const std = @import("std");
-const c = @cImport({
-    @cInclude("z_zone.h");
-    @cInclude("i_system.h");
-});
 
 // #define PU_STATIC		1	// static entire execution time
 // #define PU_SOUND		2	// static while playing
