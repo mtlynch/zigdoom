@@ -1,5 +1,77 @@
 const std = @import("std");
 
+const ConcatStep = struct {
+    step: std.Build.Step,
+    name: []const u8,
+    path: []const u8,
+    actions: std.ArrayList(Action),
+
+    pub const Action = union(enum) {
+        file: std.Build.FileSource,
+        bytes: []const u8,
+        delete_bytes: usize,
+    };
+
+    pub fn create(owner: *std.Build, name: []const u8, path: []const u8) *ConcatStep {
+        const self = owner.allocator.create(ConcatStep) catch @panic("OOM");
+        self.* = .{
+            .step = std.Build.Step.init(.{
+                .id = .custom,
+                .name = name,
+                .owner = owner,
+                .makeFn = make,
+            }),
+            .actions = std.ArrayList(Action).init(owner.allocator),
+            .name = name,
+            .path = path,
+        };
+        return self;
+    }
+
+    pub fn addFileArg(self: *ConcatStep, file: std.Build.FileSource) void {
+        self.actions.append(.{ .file = file }) catch @panic("OOM");
+        file.addStepDependencies(&self.step);
+    }
+
+    pub fn addBytes(self: *ConcatStep, bytes: []const u8) void {
+        self.actions.append(.{ .bytes = bytes }) catch @panic("OOM");
+    }
+
+    pub fn deleteBytes(self: *ConcatStep, count: usize) void {
+        self.actions.append(.{ .delete_bytes = count }) catch @panic("OOM");
+    }
+
+    fn make(step: *std.Build.Step, prog_node: *std.Progress.Node) !void {
+        const b = step.owner;
+        const self = @fieldParentPtr(ConcatStep, "step", step);
+
+        var subnode = prog_node.start(self.name, self.actions.items.len);
+        defer subnode.end();
+
+        const outf = try b.build_root.handle.createFile(self.path, .{});
+        defer outf.close();
+
+        subnode.activate();
+        for (self.actions.items) |f| {
+            switch (f) {
+                .bytes => |bytes| {
+                    try outf.writeAll(bytes);
+                },
+                .file => |file| {
+                    const file_path = file.getPath(b);
+                    const contents = try b.build_root.handle.readFileAlloc(b.allocator, file_path, std.math.maxInt(usize));
+                    defer b.allocator.free(contents);
+                    try outf.writeAll(contents);
+                },
+                .delete_bytes => |count| {
+                    try outf.seekBy(-@intCast(i64, count));
+                },
+            }
+            subnode.completeOne();
+        }
+    }
+};
+
 pub fn build(b: *std.build.Builder) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -82,22 +154,24 @@ pub fn build(b: *std.build.Builder) !void {
         "-DNORMALUNIX",
         "-DLINUX",
         "-ggdb3",
-        "-fsanitize=address",
-        "-fno-sanitize-trap=undefined",
-        "-fno-sanitize-recover=undefined",
     };
     const jsondir = "build/";
     std.fs.cwd().makeDir(jsondir) catch |e| switch (e) {
         error.PathAlreadyExists => {},
         else => return e,
     };
+    const concat = ConcatStep.create(b, "create compile_commands.json", jsondir ++ "compile_commands.json");
+    concat.step.dependOn(&exe.step);
+    concat.addBytes("[");
     inline for (c_src) |src| {
         const file_stem = comptime std.fs.path.stem(src);
-        exe.addCSourceFile(src, &common_cflags ++ &[_][]const u8{
-            "-MJ",
-            jsondir ++ file_stem ++ ".o.jsonfrag",
-        });
+        const jsonfrag = jsondir ++ file_stem ++ ".o.jsonfrag";
+        exe.addCSourceFile(src, &common_cflags ++ &[_][]const u8{ "-MJ", jsonfrag });
+        concat.addFileArg(.{ .path = jsonfrag });
     }
+    concat.deleteBytes(2);
+    concat.addBytes("]");
+    b.default_step.dependOn(&concat.step);
     const zone = b.addObject(.{
         .name = "zone",
         .root_source_file = .{ .path = srcdir ++ "z_zone.zig" },
@@ -107,10 +181,13 @@ pub fn build(b: *std.build.Builder) !void {
     zone.linkLibC();
     zone.addIncludePath(srcdir);
     exe.addObject(zone);
-    exe.addLibraryPath("/usr/lib/gcc/x86_64-linux-gnu/12");
-    exe.linkSystemLibrary("ubsan");
-    exe.linkSystemLibrary("unwind");
-    exe.linkSystemLibrary("asan");
     exe.linkSystemLibrary("X11");
     exe.linkSystemLibrary("Xext");
+
+    const run_exe = b.addRunArtifact(exe);
+    if (b.args) |args| {
+        run_exe.addArgs(args);
+    }
+    const run_step = b.step("run", "Run Doom");
+    run_step.dependOn(&run_exe.step);
 }
