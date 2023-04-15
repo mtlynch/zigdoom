@@ -25,13 +25,13 @@ const purge_count = std.meta.fields(PurgeTag).len;
 var zones: [purge_count]std.heap.GeneralPurposeAllocator(.{}) = undefined;
 
 export fn Z_Init() void {
-    for (zones) |*z| {
+    for (&zones) |*z| {
         z.* = std.heap.GeneralPurposeAllocator(.{}){};
     }
 }
 
 fn mapTag(tag: c_int) !usize {
-    inline for (std.meta.fields(PurgeTag)) |t, i| {
+    inline for (std.meta.fields(PurgeTag), 0..) |t, i| {
         if (tag == t.value)
             return i;
     }

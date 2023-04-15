@@ -2,15 +2,17 @@ const std = @import("std");
 
 pub fn build(b: *std.build.Builder) !void {
     const target = b.standardTargetOptions(.{});
-    const mode = b.standardReleaseOptions();
+    const optimize = b.standardOptimizeOption(.{});
 
     const srcdir = "linuxdoom-1.10/";
 
-    const exe = b.addExecutable("doom", null);
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
-    exe.install();
+    const exe = b.addExecutable(.{
+        .name = "doom",
+        .target = target,
+        .optimize = optimize,
+    });
     exe.linkLibC();
+    b.installArtifact(exe);
 
     const c_src = [_][]const u8{
         srcdir ++ "am_map.c",
@@ -96,7 +98,12 @@ pub fn build(b: *std.build.Builder) !void {
             jsondir ++ file_stem ++ ".o.jsonfrag",
         });
     }
-    const zone = b.addObject("zone", srcdir ++ "z_zone.zig");
+    const zone = b.addObject(.{
+        .name = "zone",
+        .root_source_file = .{ .path = srcdir ++ "z_zone.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
     zone.linkLibC();
     zone.addIncludePath(srcdir);
     exe.addObject(zone);
