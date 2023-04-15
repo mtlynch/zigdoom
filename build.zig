@@ -169,7 +169,7 @@ pub fn build(b: *std.build.Builder) !void {
         exe.addCSourceFile(src, &common_cflags ++ &[_][]const u8{ "-MJ", jsonfrag });
         concat.addFileArg(.{ .path = jsonfrag });
     }
-    concat.deleteBytes(2);
+    concat.deleteBytes(2); // comma and newline
     concat.addBytes("]");
     b.default_step.dependOn(&concat.step);
     const zone = b.addObject(.{
