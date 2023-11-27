@@ -64,7 +64,7 @@ const ConcatStep = struct {
                     try outf.writeAll(contents);
                 },
                 .delete_bytes => |count| {
-                    try outf.seekBy(-@intCast(i64, count));
+                    try outf.seekBy(-@as(i64, @intCast(count)));
                 },
             }
             subnode.completeOne();
@@ -163,12 +163,10 @@ pub fn build(b: *std.build.Builder) !void {
     const concat = ConcatStep.create(b, "create compile_commands.json", jsondir ++ "compile_commands.json");
     concat.step.dependOn(&exe.step);
     concat.addBytes("[");
-    inline for (c_src) |src| {
-        const file_stem = comptime std.fs.path.stem(src);
-        const jsonfrag = jsondir ++ file_stem ++ ".o.jsonfrag";
-        exe.addCSourceFile(src, &common_cflags ++ &[_][]const u8{ "-MJ", jsonfrag });
-        concat.addFileArg(.{ .path = jsonfrag });
-    }
+    const file_stem = comptime std.fs.path.stem(c_src[0]);
+    const jsonfrag = jsondir ++ file_stem ++ ".o.jsonfrag";
+    exe.addCSourceFiles(&c_src, &common_cflags ++ &[_][]const u8{ "-MJ", jsonfrag });
+    concat.addFileArg(.{ .path = jsonfrag });
     concat.deleteBytes(2); // comma and newline
     concat.addBytes("]");
     b.default_step.dependOn(&concat.step);
@@ -179,7 +177,7 @@ pub fn build(b: *std.build.Builder) !void {
         .optimize = optimize,
     });
     zone.linkLibC();
-    zone.addIncludePath(srcdir);
+    zone.addIncludePath(.{ .path = srcdir });
     exe.addObject(zone);
     exe.linkSystemLibrary("X11");
     exe.linkSystemLibrary("Xext");
