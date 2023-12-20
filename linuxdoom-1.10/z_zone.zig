@@ -51,13 +51,13 @@ export fn Z_Malloc(size: c_int, tag: c_int) *anyopaque {
     const zone = &zones[mapTag(tag) catch unreachable];
     const result = zone.allocator().allocWithOptions(
         u8,
-        @intCast(usize, size + hsize),
+        @as(usize, @intCast(size + hsize)),
         @alignOf(Header),
         null,
     ) catch unreachable;
-    std.mem.copy(u8, result[0..hsize], @ptrCast(
+    std.mem.copy(u8, result[0..hsize], @as(
         [*]const u8,
-        &Header{ .size = size, .tag = tag },
+        @ptrCast(&Header{ .size = size, .tag = tag }),
     )[0..hsize]);
     return result[hsize..].ptr;
 }
@@ -65,8 +65,8 @@ export fn Z_Malloc(size: c_int, tag: c_int) *anyopaque {
 export fn Z_Free(ptr: ?*anyopaque) void {
     if (ptr == null) return;
 
-    const base = @intToPtr([*]u8, @ptrToInt(ptr) - hsize);
-    const header = @ptrCast(*Header, @alignCast(@alignOf(Header), base));
+    const base = @as([*]u8, @ptrFromInt(@intFromPtr(ptr) - hsize));
+    const header = @as(*Header, @alignCast(@ptrCast(base)));
     if (header.magic != magic) {
         std.debug.print("Z_Free: freed a pointer without ZONEID\n", .{});
         std.debug.print("mem of header: {{ ", .{});
@@ -79,7 +79,7 @@ export fn Z_Free(ptr: ?*anyopaque) void {
 
     const zone = &zones[mapTag(header.tag) catch unreachable];
     zone.allocator().free(
-        base[0 .. @intCast(usize, header.size) + hsize],
+        base[0 .. @as(usize, @intCast(header.size)) + hsize],
     );
 }
 
@@ -94,7 +94,7 @@ export fn Z_FreeTags(low: c_int, high: c_int) void {
 export fn Z_CheckHeap() void {}
 
 export fn Z_ChangeTag2(ptr: *anyopaque, tag: c_int) void {
-    const base = @intToPtr([*]u8, @ptrToInt(ptr) - hsize);
-    const header = @ptrCast(*Header, @alignCast(@alignOf(Header), base));
+    const base = @as([*]u8, @ptrFromInt(@intFromPtr(ptr) - hsize));
+    const header = @as(*Header, @alignCast(@ptrCast(base)));
     header.tag = tag;
 }
